@@ -1,11 +1,13 @@
 import csv
 import logging
+import math
 import os
 import random
 
 import matplotlib.pyplot as plt
 import numpy as np
 import PIL
+import cv2
 import torch
 import tqdm
 
@@ -13,14 +15,14 @@ LOGGER = logging.getLogger(__name__)
 
 
 def plot_segmentation_images(
-    savefolder,
-    image_paths,
-    segmentations,
-    anomaly_scores=None,
-    mask_paths=None,
-    image_transform=lambda x: x,
-    mask_transform=lambda x: x,
-    save_depth=4,
+        savefolder,
+        image_paths,
+        segmentations,
+        anomaly_scores=None,
+        mask_paths=None,
+        image_transform=lambda x: x,
+        mask_transform=lambda x: x,
+        save_depth=4,
 ):
     """Generate anomaly segmentation images.
 
@@ -42,10 +44,10 @@ def plot_segmentation_images(
     os.makedirs(savefolder, exist_ok=True)
 
     for image_path, mask_path, anomaly_score, segmentation in tqdm.tqdm(
-        zip(image_paths, mask_paths, anomaly_scores, segmentations),
-        total=len(image_paths),
-        desc="Generating Segmentation Images...",
-        leave=False,
+            zip(image_paths, mask_paths, anomaly_scores, segmentations),
+            total=len(image_paths),
+            desc="Generating Segmentation Images...",
+            leave=False,
     ):
         image = PIL.Image.open(image_path).convert("RGB")
         image = image_transform(image)
@@ -65,9 +67,31 @@ def plot_segmentation_images(
         savename = "_".join(savename[-save_depth:])
         savename = os.path.join(savefolder, savename)
         f, axes = plt.subplots(1, 2 + int(masks_provided))
-        axes[0].imshow(image.transpose(1, 2, 0))
-        axes[1].imshow(mask.transpose(1, 2, 0))
-        axes[2].imshow(segmentation)
+        f.suptitle(f"Anomaly score: {anomaly_score:04f}")
+        image = image.transpose(1, 2, 0)
+        axes[0].imshow(image)
+        axes[0].set_title("Original")
+
+        binary, bin_mask = cv2.threshold(segmentation, 0.2, 1, cv2.THRESH_BINARY)
+        bin_mask = bin_mask.astype('uint8')
+        segmentation *= (255.0 / segmentation.max())
+
+        segmentation *= math.sqrt(anomaly_score)
+
+        segmentation = segmentation.astype('uint8')
+
+        axes[1].imshow(segmentation, vmin=0, vmax=255)
+        axes[1].set_title("Heatmap")
+
+        for ax in axes:
+            ax.axis('off')
+
+        segmentation = cv2.applyColorMap(segmentation, cv2.COLORMAP_VIRIDIS)
+        segmentation = cv2.cvtColor(segmentation, cv2.COLOR_BGR2RGB)
+        segmentation = cv2.bitwise_and(segmentation, segmentation, mask=bin_mask)
+        overlay = cv2.addWeighted(image, 1, segmentation, 0.8, 0)
+        axes[2].imshow(overlay)
+        axes[2].set_title("Layered")
         f.set_size_inches(3 * (2 + int(masks_provided)), 3)
         f.tight_layout()
         f.savefig(savename)
@@ -75,7 +99,7 @@ def plot_segmentation_images(
 
 
 def create_storage_folder(
-    main_folder_path, project_folder, group_folder, mode="iterate"
+        main_folder_path, project_folder, group_folder, mode="iterate"
 ):
     os.makedirs(main_folder_path, exist_ok=True)
     project_path = os.path.join(main_folder_path, project_folder)
@@ -125,16 +149,16 @@ def fix_seeds(seed, with_torch=True, with_cuda=True):
 
 
 def compute_and_store_final_results(
-    results_path,
-    results,
-    row_names=None,
-    column_names=[
-        "Instance AUROC",
-        "Full Pixel AUROC",
-        "Full PRO",
-        "Anomaly Pixel AUROC",
-        "Anomaly PRO",
-    ],
+        results_path,
+        results,
+        row_names=None,
+        column_names=[
+            "Instance AUROC",
+            "Full Pixel AUROC",
+            "Full PRO",
+            "Anomaly Pixel AUROC",
+            "Anomaly PRO",
+        ],
 ):
     """Store computed results as CSV file.
 

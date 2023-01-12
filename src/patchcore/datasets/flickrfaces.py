@@ -6,21 +6,7 @@ import torch
 from torchvision import transforms
 
 _CLASSNAMES = [
-    "bottle",
-    "cable",
-    "capsule",
-    "carpet",
-    "grid",
-    "hazelnut",
-    "leather",
-    "metal_nut",
-    "pill",
-    "screw",
-    "tile",
-    "toothbrush",
-    "transistor",
-    "wood",
-    "zipper",
+    "face"
 ]
 
 IMAGENET_MEAN = [0.485, 0.456, 0.406]
@@ -33,16 +19,16 @@ class DatasetSplit(Enum):
     TEST = "test"
 
 
-class MVTecDataset(torch.utils.data.Dataset):
+class FlickrFacesDataset(torch.utils.data.Dataset):
     """
-    PyTorch Dataset for MVTec.
+    PyTorch Dataset for FlickrFaces.
     """
 
     def __init__(
         self,
         source,
         classname,
-        resize=256,
+        resize=224,
         imagesize=224,
         split=DatasetSplit.TRAIN,
         train_val_split=1.0,

@@ -1,7 +1,9 @@
 import timm  # noqa
 import torchvision.models as models  # noqa
+from patchcore.networks import vae
 
 _BACKBONES = {
+    "vae": "vae.get_vae(pretrained=True)",
     "alexnet": "models.alexnet(pretrained=True)",
     "bninception": 'pretrainedmodels.__dict__["bninception"]'
     '(pretrained="imagenet", num_classes=1000)',
